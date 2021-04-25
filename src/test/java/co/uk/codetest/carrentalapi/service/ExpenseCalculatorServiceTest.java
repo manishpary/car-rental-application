@@ -1,6 +1,7 @@
 package co.uk.codetest.carrentalapi.service;
 
 import co.uk.codetest.carrentalapi.dao.DestinationRepository;
+import co.uk.codetest.carrentalapi.exception.NoDataFoundException;
 import co.uk.codetest.carrentalapi.model.Destination;
 import co.uk.codetest.carrentalapi.model.FuelType;
 import co.uk.codetest.carrentalapi.model.VehicleType;
@@ -18,6 +19,7 @@ import java.math.BigDecimal;
 import static co.uk.codetest.carrentalapi.util.Constants.RATELIST.STANDARD_RATE_DIESEL;
 import static co.uk.codetest.carrentalapi.util.Constants.RATELIST.STANDARD_RATE_PETROL;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -83,6 +85,16 @@ public class ExpenseCalculatorServiceTest {
     Destination destination = new Destination("MUMBAI", 200.0d);
     when(destinationRepository.findByCityIgnoreCase("MUMBAI")).thenReturn(destination);
     expenseCalculatorService.calculateTotalExpense(vehicleType, fuelType, "MUMBAI", 5, true);
+  }
+
+  @Test
+  public void testCalculateExpenseWhenNoDataFoundException() {
+    when(destinationRepository.findByCityIgnoreCase("MUMBAI")).thenReturn(null);
+    Assertions.assertThrows(
+        NoDataFoundException.class,
+        () -> {
+          expenseCalculatorService.calculateTotalExpense(any(), any(), any(), any(), any());
+        });
   }
 
   @Test
