@@ -10,10 +10,9 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 
 import static co.uk.codetest.carrentalapi.util.Constants.RATELIST.*;
 
@@ -22,31 +21,25 @@ import static co.uk.codetest.carrentalapi.util.Constants.RATELIST.*;
 public class ExpenseCalculatorService {
 
   private final DestinationRepository destinationRepository;
-
-  private final ExpenseCalculator expenseCalculatorFunction = this::calculateExpense;
-
   private final BiFunction<BigDecimal, BigDecimal, BigDecimal> additionFunc = BigDecimal::add;
-
   private final BiFunction<BigDecimal, BigDecimal, BigDecimal> subtractFunc = BigDecimal::subtract;
-
   private final BiFunction<BigDecimal, BigDecimal, BigDecimal> multiplyFunc = BigDecimal::multiply;
-
   private final BiFunction<BigDecimal, BigDecimal, BigDecimal> divideFunc = BigDecimal::divide;
-
   private final BiPredicate<Integer, Integer> isVehicleCapacityFull =
       (value1, value2) -> (value1 > value2);
+  private final ExpenseCalculator expenseCalculatorFunction = this::calculateExpense;
 
   public ExpenseCalculatorService(DestinationRepository destinationRepository) {
     this.destinationRepository = destinationRepository;
   }
 
   /**
-   * @param vehicleType
-   * @param fuelType
-   * @param destination
-   * @param numberOfPeopleTravelling
-   * @param isAirconditioningRequired
-   * @return
+   * @param vehicleType vehicle type ex car,van,bus,suv
+   * @param fuelType fuel type ex petrol,diesel
+   * @param destination destination ex mumbai,chennai
+   * @param numberOfPeopleTravelling ex no. of traveller
+   * @param isAirconditioningRequired ex air condition required or not
+   * @return Total expense
    */
   public BigDecimal calculateTotalExpense(
       VehicleType vehicleType,
@@ -59,12 +52,12 @@ public class ExpenseCalculatorService {
   }
 
   /**
-   * @param vehicleType
-   * @param fuelType
-   * @param destination
-   * @param numberOfPeopleTravelling
-   * @param isAirconditioningRequired
-   * @return
+   * @param vehicleType vehicle type ex car,van,bus,suv
+   * @param fuelType fuel type ex petrol,diesel
+   * @param destination destination ex mumbai,chennai
+   * @param numberOfPeopleTravelling ex no. of traveller
+   * @param isAirconditioningRequired ex air condition required or not
+   * @return total expense
    */
   private BigDecimal calculateExpense(
       VehicleType vehicleType,
@@ -72,48 +65,49 @@ public class ExpenseCalculatorService {
       String destination,
       Integer numberOfPeopleTravelling,
       Boolean isAirconditioningRequired) {
-    BigDecimal totalExpense = BigDecimal.ZERO;
-    try {
-      Integer maxCapacity = vehicleType.getMaxPassengerCapacity();
-      String fuelTypeStr = fuelType.getType();
-      Destination dest = destinationRepository.findByCityIgnoreCase(destination);
-      if (dest == null) {
-        log.error("There is no data in the database for" + " " + destination);
-        throw new NoDataFoundException("data is not available");
-      }
-      BigDecimal distance = BigDecimal.valueOf(dest.getDistance());
-      CompletableFuture<BigDecimal> expense = CompletableFuture.completedFuture(BigDecimal.ZERO);
-      if (distance.compareTo(BigDecimal.ZERO) > 0) {
-        expense =
-            CompletableFuture.completedFuture(standardRateBasedOnFuelType(fuelTypeStr))
-                .thenApply(
-                    standarRate -> standardRateBasedOnDiscount(vehicleType.getType(), standarRate))
-                .thenApply(
-                    standarRate ->
-                        standardRateBasedOnAirConditon(isAirconditioningRequired, standarRate))
-                .thenApply(
-                    standarRate ->
-                        standardRateBasedOnVehicleCapacity(
-                            numberOfPeopleTravelling, maxCapacity, standarRate));
-      }
-      totalExpense = multiplyFunc.apply(distance, expense.get()).setScale(2, RoundingMode.HALF_UP);
-      printOutPut(
-          vehicleType,
-          fuelType,
-          destination,
-          numberOfPeopleTravelling,
-          isAirconditioningRequired,
-          totalExpense);
-
-    } catch (ExecutionException | InterruptedException e) {
-      log.error(e.getMessage());
+    BigDecimal totalExpense;
+    BigDecimal expense = BigDecimal.ZERO;
+    Destination dest = destinationRepository.findByCityIgnoreCase(destination);
+    if (dest == null) {
+      log.error("There is no data in the database for" + " " + destination);
+      throw new NoDataFoundException("data is not available");
     }
+    BigDecimal distance = BigDecimal.valueOf(dest.getDistance());
+    if (distance.compareTo(BigDecimal.ZERO) > 0) {
+      Function<String, BigDecimal> standardRateBasedOnFuelTypeFunc =
+          fuelTypeStr -> standardRateBasedOnFuelType(fuelType.getType());
+      Function<BigDecimal, BigDecimal> standardRateBasedOnDiscountFunc =
+          standardRate -> standardRateBasedOnDiscount(vehicleType.getType(), standardRate);
+      Function<BigDecimal, BigDecimal> standardRateBasedOnAirConditionFunc =
+          standardRate -> standardRateBasedOnAirCondition(isAirconditioningRequired, standardRate);
+      Function<BigDecimal, BigDecimal> standardRateBasedOnVehicleCapacityFunc =
+          standardRate ->
+              standardRateBasedOnVehicleCapacity(
+                  numberOfPeopleTravelling, vehicleType.getMaxPassengerCapacity(), standardRate);
+      expense =
+          standardRateBasedOnFuelTypeFunc
+              .andThen(
+                  standardRateBasedOnDiscountFunc.andThen(
+                      standardRateBasedOnAirConditionFunc.andThen(
+                          standardRateBasedOnVehicleCapacityFunc)))
+              .apply(fuelType.getType());
+    }
+
+    totalExpense = multiplyFunc.apply(distance, expense).setScale(2, RoundingMode.HALF_UP);
+    printOutPut(
+        vehicleType,
+        fuelType,
+        destination,
+        numberOfPeopleTravelling,
+        isAirconditioningRequired,
+        totalExpense);
+
     return totalExpense;
   }
 
   /**
-   * @param fuelTypeStr
-   * @return
+   * @param fuelTypeStr fuel type ex PETROL, DIESEL
+   * @return rate based on fuel type
    */
   private BigDecimal standardRateBasedOnFuelType(String fuelTypeStr) {
     switch (fuelTypeStr.toUpperCase()) {
@@ -127,9 +121,9 @@ public class ExpenseCalculatorService {
   }
 
   /**
-   * @param vehicleType
-   * @param standardRate
-   * @return
+   * @param vehicleType ex CAR,BUS
+   * @param standardRate standard Rate
+   * @return Rate based on Discount
    */
   private BigDecimal standardRateBasedOnDiscount(String vehicleType, BigDecimal standardRate) {
     if (vehicleType.equalsIgnoreCase("BUS")) {
@@ -142,10 +136,10 @@ public class ExpenseCalculatorService {
   }
 
   /**
-   * @param numberOfPeopleTravelling
-   * @param maxCapacity
-   * @param standardRate
-   * @return
+   * @param numberOfPeopleTravelling no of traveller
+   * @param maxCapacity max vehicle capacity
+   * @param standardRate standard rate
+   * @return standardRate based on vehicle capacity
    */
   private BigDecimal standardRateBasedOnVehicleCapacity(
       Integer numberOfPeopleTravelling, Integer maxCapacity, BigDecimal standardRate) {
@@ -160,11 +154,11 @@ public class ExpenseCalculatorService {
     return standardRate;
   }
 
-  private BigDecimal standardRateBasedOnAirConditon(
-      Boolean isAirConditionRequired, BigDecimal standarRate) {
+  private BigDecimal standardRateBasedOnAirCondition(
+      Boolean isAirConditionRequired, BigDecimal standardRate) {
     return isAirConditionRequired
-        ? additionFunc.apply(standarRate, AC_ADDITIONAL_CHARGE)
-        : standarRate;
+        ? additionFunc.apply(standardRate, AC_ADDITIONAL_CHARGE)
+        : standardRate;
   }
 
   private void printOutPut(

@@ -86,10 +86,13 @@ public class ExpenseCalculatorServiceTest {
   }
 
   @Test
-  public void testStandardRateBasedOnAirConditon() {
+  public void testStandardRateBasedOnAirCondition() {
     BigDecimal standardRateBasedOnAirCondition =
         ReflectionTestUtils.invokeMethod(
-            expenseCalculatorService, "standardRateBasedOnAirConditon", true, STANDARD_RATE_PETROL);
+            expenseCalculatorService,
+            "standardRateBasedOnAirCondition",
+            true,
+            STANDARD_RATE_PETROL);
     Assertions.assertEquals(new BigDecimal(17), standardRateBasedOnAirCondition);
   }
 }
