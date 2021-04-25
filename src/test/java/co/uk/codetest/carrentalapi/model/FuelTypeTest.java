@@ -1,5 +1,6 @@
 package co.uk.codetest.carrentalapi.model;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +10,6 @@ import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class FuelTypeTest {
@@ -30,7 +30,7 @@ public class FuelTypeTest {
   @Test
   public void testGetType() {
     String type = fuelType.getType();
-    assertThat(type).isEqualTo("PETROL");
+    Assertions.assertEquals("PETROL", type);
   }
 
   @Test

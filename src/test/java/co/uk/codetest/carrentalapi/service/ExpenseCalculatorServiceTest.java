@@ -56,10 +56,10 @@ public class ExpenseCalculatorServiceTest {
   }
 
   @Test
-  public void testDiscountBasedOnVehicleType() {
+  public void testStandardRateBasedOnDiscount() {
     BigDecimal discountRate =
         ReflectionTestUtils.invokeMethod(
-            expenseCalculatorService, "discountBasedOnVehicleType", "BUS", STANDARD_RATE_PETROL);
+            expenseCalculatorService, "standardRateBasedOnDiscount", "BUS", STANDARD_RATE_PETROL);
     Assertions.assertEquals(
         new BigDecimal(14.70).setScale(2, BigDecimal.ROUND_HALF_UP), discountRate);
   }
@@ -83,7 +83,13 @@ public class ExpenseCalculatorServiceTest {
     Destination destination = new Destination("MUMBAI", 200.0d);
     when(destinationRepository.findByCityIgnoreCase("MUMBAI")).thenReturn(destination);
     expenseCalculatorService.calculateTotalExpense(vehicleType, fuelType, "MUMBAI", 5, true);
-    /*  PowerMockito.verifyPrivate(expenseCalculatorService, times(1))
-          .invoke("calculateExpense", vehicleType, fuelType, "MUMBAI", 5, true);
-    */ }
+  }
+
+  @Test
+  public void testStandardRateBasedOnAirConditon() {
+    BigDecimal standardRateBasedOnAirCondition =
+        ReflectionTestUtils.invokeMethod(
+            expenseCalculatorService, "standardRateBasedOnAirConditon", true, STANDARD_RATE_PETROL);
+    Assertions.assertEquals(new BigDecimal(17), standardRateBasedOnAirCondition);
+  }
 }

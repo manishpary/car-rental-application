@@ -1,5 +1,6 @@
 package co.uk.codetest.carrentalapi.model;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +10,6 @@ import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DestinationTest {
@@ -31,13 +31,13 @@ public class DestinationTest {
   @Test
   public void testGetCity() {
     String city = destination.getCity();
-    assertThat(city).isEqualTo("MUMBAI");
+    Assertions.assertEquals("MUMBAI", city);
   }
 
   @Test
   public void testGetDistance() {
     Double distance = destination.getDistance();
-    assertThat(distance == 200.0);
+    Assertions.assertEquals(200.0, distance);
   }
 
   @Test

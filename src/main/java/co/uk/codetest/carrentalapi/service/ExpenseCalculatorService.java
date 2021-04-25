@@ -9,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -69,53 +72,42 @@ public class ExpenseCalculatorService {
       String destination,
       Integer numberOfPeopleTravelling,
       Boolean isAirconditioningRequired) {
-    Integer maxCapacity = vehicleType.getMaxPassengerCapacity();
-    String fuelTypeStr = fuelType.getType();
-    Destination dest = destinationRepository.findByCityIgnoreCase(destination);
-    if (dest == null) {
-      log.error("There is no data in the database for" + " " + destination);
-      throw new NoDataFoundException("data is not available");
+    BigDecimal totalExpense = BigDecimal.ZERO;
+    try {
+      Integer maxCapacity = vehicleType.getMaxPassengerCapacity();
+      String fuelTypeStr = fuelType.getType();
+      Destination dest = destinationRepository.findByCityIgnoreCase(destination);
+      if (dest == null) {
+        log.error("There is no data in the database for" + " " + destination);
+        throw new NoDataFoundException("data is not available");
+      }
+      BigDecimal distance = BigDecimal.valueOf(dest.getDistance());
+      CompletableFuture<BigDecimal> expense = CompletableFuture.completedFuture(BigDecimal.ZERO);
+      if (distance.compareTo(BigDecimal.ZERO) > 0) {
+        expense =
+            CompletableFuture.completedFuture(standardRateBasedOnFuelType(fuelTypeStr))
+                .thenApply(
+                    standarRate -> standardRateBasedOnDiscount(vehicleType.getType(), standarRate))
+                .thenApply(
+                    standarRate ->
+                        standardRateBasedOnAirConditon(isAirconditioningRequired, standarRate))
+                .thenApply(
+                    standarRate ->
+                        standardRateBasedOnVehicleCapacity(
+                            numberOfPeopleTravelling, maxCapacity, standarRate));
+      }
+      totalExpense = multiplyFunc.apply(distance, expense.get()).setScale(2, RoundingMode.HALF_UP);
+      printOutPut(
+          vehicleType,
+          fuelType,
+          destination,
+          numberOfPeopleTravelling,
+          isAirconditioningRequired,
+          totalExpense);
+
+    } catch (ExecutionException | InterruptedException e) {
+      log.error(e.getMessage());
     }
-    BigDecimal distance = BigDecimal.valueOf(dest.getDistance());
-    BigDecimal standardRate = BigDecimal.ZERO;
-    BigDecimal totalExpense;
-    if (distance.compareTo(BigDecimal.ZERO) > 0) {
-      standardRate = standardRateBasedOnFuelType(fuelTypeStr);
-      standardRate =
-          isAirconditioningRequired
-              ? additionFunc.apply(standardRate, AC_ADDITIONAL_CHARGE)
-              : standardRate;
-
-      standardRate = discountBasedOnVehicleType(vehicleType.getType(), standardRate);
-      standardRate =
-          standardRateBasedOnVehicleCapacity(numberOfPeopleTravelling, maxCapacity, standardRate);
-    }
-    totalExpense = multiplyFunc.apply(distance, standardRate);
-
-    System.out.println(
-        "Vehicle Type  : "
-            + vehicleType.getType()
-            + System.lineSeparator()
-            + "Fuel Type : "
-            + fuelType.getType()
-            + System.lineSeparator()
-            + "Destination : "
-            + destination
-            + System.lineSeparator()
-            + "Number of People Travelling : "
-            + numberOfPeopleTravelling
-            + System.lineSeparator()
-            + "Max Passenger Capacity of Selected Vehicle:"
-            + vehicleType.getMaxPassengerCapacity()
-            + System.lineSeparator()
-            + "Is Air Conditioning Required: "
-            + isAirconditioningRequired
-            + System.lineSeparator()
-            + System.lineSeparator()
-            + "Total Expenses = "
-            + totalExpense
-            + "/-");
-
     return totalExpense;
   }
 
@@ -139,7 +131,7 @@ public class ExpenseCalculatorService {
    * @param standardRate
    * @return
    */
-  private BigDecimal discountBasedOnVehicleType(String vehicleType, BigDecimal standardRate) {
+  private BigDecimal standardRateBasedOnDiscount(String vehicleType, BigDecimal standardRate) {
     if (vehicleType.equalsIgnoreCase("BUS")) {
       standardRate =
           subtractFunc.apply(
@@ -166,5 +158,44 @@ public class ExpenseCalculatorService {
                   new BigDecimal(additionalPeople), ADDITIONAL_CHARGE_OVER_CAPACITY));
     }
     return standardRate;
+  }
+
+  private BigDecimal standardRateBasedOnAirConditon(
+      Boolean isAirConditionRequired, BigDecimal standarRate) {
+    return isAirConditionRequired
+        ? additionFunc.apply(standarRate, AC_ADDITIONAL_CHARGE)
+        : standarRate;
+  }
+
+  private void printOutPut(
+      VehicleType vehicleType,
+      FuelType fuelType,
+      String destination,
+      Integer numberOfPeopleTravelling,
+      Boolean isAirconditioningRequired,
+      BigDecimal totalExpense) {
+    System.out.println(
+        "Vehicle Type  : "
+            + vehicleType.getType()
+            + System.lineSeparator()
+            + "Fuel Type : "
+            + fuelType.getType()
+            + System.lineSeparator()
+            + "Destination : "
+            + destination
+            + System.lineSeparator()
+            + "Number of People Travelling : "
+            + numberOfPeopleTravelling
+            + System.lineSeparator()
+            + "Max Passenger Capacity of Selected Vehicle:"
+            + vehicleType.getMaxPassengerCapacity()
+            + System.lineSeparator()
+            + "Is Air Conditioning Required: "
+            + isAirconditioningRequired
+            + System.lineSeparator()
+            + System.lineSeparator()
+            + "Total Expenses = "
+            + totalExpense
+            + "/-");
   }
 }

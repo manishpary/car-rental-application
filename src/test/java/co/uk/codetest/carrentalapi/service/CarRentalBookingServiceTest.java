@@ -14,6 +14,7 @@ import org.mockito.Mockito;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.math.BigDecimal;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 import static org.mockito.ArgumentMatchers.any;
@@ -48,7 +49,7 @@ public class CarRentalBookingServiceTest {
   }
 
   @Test
-  public void testCalculateTripFare() {
+  public void testCalculateTripFare() throws ExecutionException, InterruptedException {
     when(vehicleTypeRepository.findByTypeIgnoreCase("CAR")).thenReturn(vehicleType);
     when(fuelTypeRepository.findByTypeIgnoreCase("PETROL")).thenReturn(fuelType);
     when(expenseCalculatorService.calculateTotalExpense(any(), any(), any(), any(), any()))

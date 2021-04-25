@@ -1,5 +1,6 @@
 package co.uk.codetest.carrentalapi.model;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +10,6 @@ import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class VehicleTypeTest {
@@ -31,13 +31,13 @@ public class VehicleTypeTest {
   @Test
   public void testGetType() {
     String type = vehicleType.getType();
-    assertThat(type).isEqualTo("CAR");
+    Assertions.assertEquals("CAR", type);
   }
 
   @Test
   public void testGetMaxPassengerCapacity() {
     Integer maxPassengerCapacity = vehicleType.getMaxPassengerCapacity();
-    assertThat(maxPassengerCapacity == 5);
+    Assertions.assertEquals(5, maxPassengerCapacity);
   }
 
   @Test
