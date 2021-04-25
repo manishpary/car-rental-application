@@ -19,7 +19,8 @@ Unit Tests are run using the following command
 To view the test report,Run above command and go to this path /build/reports/index.html
 
 ## Sample Report 
-Screenshot 2021-04-24 at 23.42.03![image](https://user-images.githubusercontent.com/39412150/115974823-7e9eb480-a557-11eb-9e0d-7590c4c0c47d.png)
+Screenshot 2021-04-25 at 13.48.15![image](https://user-images.githubusercontent.com/39412150/115993958-f8bd5080-a5cc-11eb-909f-4a16d3e64fc4.png)
+
 
 # How to Run
 
